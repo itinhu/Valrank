@@ -396,6 +396,12 @@ async function savePlayer() {
 // ─── REMOVE ──────────────────────────────────────────────────────────────────
 async function removePlayer(idx) {
   const p = players[idx];
+
+  if (!askPassword()) {
+    alert('Senha incorreta!');
+    return;
+  }
+
   if (!p || !confirm(`Remover ${p.nick} #${p.tag} do ranking?`)) return;
   try {
     await dbDelete(p.id);
