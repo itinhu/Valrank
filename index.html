@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ValRank – Ranking do grupo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #FF4655; --red-dark: #c9333f;
+      --bg: #0f0f10; --surface: #1a1a1d; --surface2: #222226;
+      --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+      --text: #f0f0f0; --muted: #888;
+      --gold: #FFD700; --silver: #B0B0B0; --bronze: #CD7F32;
+      --green: #4ade80; --rose: #f87171;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; padding: 2rem 1rem; }
+    .container { max-width: 700px; margin: 0 auto; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+    .logo { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: 2px; color: var(--text); }
+    .logo span { color: var(--red); }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn { font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; padding: 8px 16px; border-radius: 8px; cursor: pointer; border: none; transition: background 0.15s, opacity 0.15s; }
+    .btn-primary { background: var(--red); color: #fff; }
+    .btn-primary:hover { background: var(--red-dark); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; }
+    .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .info-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--muted); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .info-bar a { color: var(--red); text-decoration: none; }
+    .sel { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 3px 7px; cursor: pointer; }
+
+    .sync-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; font-size: 12px; color: var(--muted); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s; }
+    .sync-dot.ok  { background: var(--green); }
+    .sync-dot.err { background: var(--rose); }
+    .sync-dot.spin { background: #85b7eb; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); align-items: center; justify-content: center; z-index: 100; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; width: 340px; max-width: 92vw; }
+    .modal h2 { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 1.25rem; }
+    .modal label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; margin-top: 14px; }
+    .modal input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 15px; padding: 9px 12px; outline: none; transition: border-color 0.15s; }
+    .modal input:focus { border-color: var(--red); }
+    .error-msg { font-size: 12px; color: #ff7a84; margin-top: 10px; display: none; background: rgba(255,70,85,0.1); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,70,85,0.22); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+    .btn-save { flex: 1; background: var(--red); color: #fff; border: none; padding: 10px; border-radius: 8px; font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+    .btn-save:hover:not(:disabled) { background: var(--red-dark); }
+    .btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-cancel { flex: 1; background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .btn-cancel:hover { border-color: var(--border-hover); color: var(--text); }
+
+    .rank-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .player-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s; }
+    .player-card:hover { border-color: var(--border-hover); }
+    .player-card.loading { opacity: 0.6; }
+
+    .pos { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; color: var(--muted); min-width: 26px; text-align: center; }
+    .pos.gold { color: var(--gold); } .pos.silver { color: var(--silver); } .pos.bronze { color: var(--bronze); }
+
+    .rank-icon { font-size: 26px; width: 38px; text-align: center; flex-shrink: 0; }
+
+    .player-info { flex: 1; min-width: 0; }
+    .player-nick { font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .player-nick .tag { font-size: 12px; color: var(--muted); font-weight: 400; font-family: 'Inter', sans-serif; }
+    .player-sub { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .chg-pos { color: var(--green); font-size: 12px; }
+    .chg-neg { color: var(--rose);  font-size: 12px; }
+    .peak-badge { font-size: 10px; background: rgba(255,255,255,0.055); color: var(--muted); padding: 2px 7px; border-radius: 4px; margin-top: 3px; display: inline-block; }
+
+    .pill { font-size: 10px; padding: 2px 7px; border-radius: 4px; display: inline-block; margin-left: 6px; }
+    .pill.load { background: rgba(55,138,221,0.18); color: #85b7eb; }
+    .pill.err  { background: rgba(255,70,85,0.15); color: #ff7a84; }
+
+    .player-rr { text-align: right; flex-shrink: 0; }
+    .rr-val { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); }
+    .rr-label { font-size: 11px; color: var(--muted); }
+
+    .card-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .icon-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 3px 5px; border-radius: 4px; opacity: 0.45; transition: opacity 0.15s, color 0.15s; }
+    .icon-btn:hover { opacity: 1; }
+    .icon-btn.r:hover { color: #85b7eb; }
+    .icon-btn.d:hover { color: var(--red); }
+
+    .empty { text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
+    .empty-icon { font-size: 42px; margin-bottom: 1rem; }
+    .empty p { font-size: 14px; line-height: 1.6; }
+
+    .skeleton { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; height: 68px; animation: shimmer 1.4s infinite; }
+    @keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">VAL<span>RANK | CdN </span></div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" onclick="refreshAll()">↻ Atualizar ranks</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Jogador</button>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    <span>
+      Dados via <a href="https://henrikdev.xyz" target="_blank">Henrik Dev API v3</a> &nbsp;|&nbsp;
+      Região: <select class="sel" id="selRegion" onchange="changeRegion(this.value)">
+        <option value="br">BR</option><option value="na">NA</option>
+        <option value="eu">EU</option><option value="ap">AP</option>
+        <option value="kr">KR</option><option value="latam">LATAM</option>
+      </select>
+      &nbsp;Plataforma: <select class="sel" id="selPlatform" onchange="changePlatform(this.value)">
+        <option value="pc">PC</option><option value="console">Console</option>
+      </select>
+    </span>
+    <span id="lastUpdate"></span>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Conectando ao banco de dados…</span>
+  </div>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <h2>Adicionar jogador</h2>
+      <label>Nick</label>
+      <input type="text" id="iNick" placeholder="Azeitona" autocomplete="off" />
+      <label>Tag</label>
+      <input type="text" id="iTag" placeholder="BR1" autocomplete="off" />
+      <div class="error-msg" id="mErr"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-save" id="btnSave" onclick="savePlayer()">Buscar e salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rank-list" id="rankList">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://olmjtbhffswvqktlukxs.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbWp0YmhmZnN3dnFrdGx1a3hzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMDc3MzMsImV4cCI6MjA5Mjg4MzczM30.JGOM2BJK_MKFzZsRNRwo0EIPOK9di83DnJpfYa2dxwY';
+const HENRIK_KEY   = 'HDEV-6a3abbed-8a8d-43a2-92c2-46cc5d7429b5';
+
+const ADMIN_PASSWORD = 'QAZ!@#wsx456';
+
+function askPassword() {
+  const pass = prompt('Digite a senha de administrador:');
+  return pass === ADMIN_PASSWORD;
+}
+
+
+
+let region   = localStorage.getItem('vr_region')   || 'br';
+let platform = localStorage.getItem('vr_platform') || 'pc';
+document.getElementById('selRegion').value   = region;
+document.getElementById('selPlatform').value = platform;
+
+// ─── SUPABASE HELPERS ───────────────────────────────────────────────────────
+const SB = (path, opts = {}) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  headers: {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    Prefer: opts.prefer || '',
+    ...opts.headers,
+  },
+  ...opts,
+});
+
+async function dbLoad() {
+  const res = await SB('players?order=rr.desc');
+  if (!res.ok) throw new Error('Falha ao carregar do banco');
+  return res.json();
+}
+
+async function dbInsert(player) {
+  const res = await SB('players', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: JSON.stringify({
+      nick: player.nick,
+      tag: player.tag,
+      current_tier: player.currentTier,
+      rr: player.rr,
+      mmr_change: player.mmrChange,
+      peak_tier: player.peakTier,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) {
+    const e = await res.json();
+    throw new Error(e.message || 'Erro ao salvar no banco');
+  }
+  return (await res.json())[0];
+}
+
+async function dbUpdate(id, data) {
+  const res = await SB(`players?id=eq.${id}`, {
+    method: 'PATCH',
+    prefer: 'return=representation',
+    body: JSON.stringify({
+      current_tier: data.currentTier,
+      rr: data.rr,
+      mmr_change: data.mmrChange,
+      peak_tier: data.peakTier,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error('Erro ao atualizar no banco');
+}
+
+async function dbDelete(id) {
+  await SB(`players?id=eq.${id}`, { method: 'DELETE' });
+}
+
+// ─── RANK UTILS ─────────────────────────────────────────────────────────────
+const ICONS = { Iron:'🍆', Bronze:'🟤', Silver:'⚪', Gold:'🟡', Platinum:'🔵', Diamond:'💎', Ascendant:'🟢', Immortal:'🔴', Radiant:'⭐' };
+const ORDER = ['Unranked','Iron 1','Iron 2','Iron 3','Bronze 1','Bronze 2','Bronze 3','Silver 1','Silver 2','Silver 3','Gold 1','Gold 2','Gold 3','Platinum 1','Platinum 2','Platinum 3','Diamond 1','Diamond 2','Diamond 3','Ascendant 1','Ascendant 2','Ascendant 3','Immortal 1','Immortal 2','Immortal 3','Radiant'];
+
+function icon(t) { if (!t) return '❓'; for (const k of Object.keys(ICONS)) if (t.includes(k)) return ICONS[k]; return '❓'; }
+function score(t, rr) { const i = ORDER.indexOf(t); return (i >= 0 ? i * 100 : -1) + (parseInt(rr) || 0); }
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let players = []; // { id, nick, tag, currentTier, rr, mmrChange, peakTier, loading, error }
+
+function syncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot ' + state;
+  document.getElementById('syncMsg').textContent = msg;
+}
+
+// ─── HENRIK API ──────────────────────────────────────────────────────────────
+async function fetchMMR(nick, tag) {
+  const url = `https://api.henrikdev.xyz/valorant/v3/mmr/${region}/${platform}/${encodeURIComponent(nick)}/${encodeURIComponent(tag)}`;
+  const res  = await fetch(url, { headers: { Authorization: HENRIK_KEY } });
+  const json = await res.json();
+  if (json.status !== 200) throw new Error(json.errors?.[0]?.message || json.message || `Status ${json.status}`);
+  const d = json.data;
+  return {
+    currentTier : d?.current?.tier?.name  ?? 'Unranked',
+    rr          : d?.current?.rr          ?? 0,
+    mmrChange   : d?.current?.last_change ?? null,
+    peakTier    : d?.peak?.tier?.name     ?? null,
+  };
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  const list = document.getElementById('rankList');
+
+  if (!players.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🎯</div><p>Nenhum jogador ainda.<br>Clique em <strong>+ Jogador</strong> para começar.</p></div>`;
+    return;
+  }
+
+  const sorted = [...players].sort((a, b) => score(b.currentTier, b.rr) - score(a.currentTier, a.rr));
+
+  list.innerHTML = sorted.map((p, i) => {
+    const oi  = players.indexOf(p);
+    const pc  = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const med = i === 0 ? '🥇'  : i === 1 ? '🥈'     : i === 2 ? '🥉'     : `#${i + 1}`;
+    const st  = p.loading ? `<span class="pill load">atualizando…</span>` : p.error ? `<span class="pill err" title="${p.error}">erro ⚠</span>` : '';
+    let chg = '';
+    if (p.mmrChange != null && !p.loading && !p.error) {
+      chg = `<span class="${p.mmrChange >= 0 ? 'chg-pos' : 'chg-neg'}">${p.mmrChange >= 0 ? '+' : ''}${p.mmrChange} última</span>`;
+    }
+    return `
+      <div class="player-card${p.loading ? ' loading' : ''}">
+        <div class="pos ${pc}">${med}</div>
+        <div class="rank-icon">${icon(p.currentTier)}</div>
+        <div class="player-info">
+          <div class="player-nick">${p.nick}<span class="tag"> #${p.tag}</span>${st}</div>
+          <div class="player-sub"><span>${p.currentTier || '—'}</span>${chg}</div>
+          ${p.peakTier ? `<span class="peak-badge">pico: ${p.peakTier}</span>` : ''}
+        </div>
+        <div class="player-rr">
+          <div class="rr-val">${p.loading ? '…' : p.error ? '?' : p.rr}</div>
+          <div class="rr-label">RR</div>
+        </div>
+        <div class="card-actions">
+          <button class="icon-btn r" onclick="refreshPlayer(${oi})" title="Atualizar rank">↻</button>
+          <button class="icon-btn d" onclick="removePlayer(${oi})" title="Remover">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('lastUpdate').textContent =
+    'atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── LOAD FROM DB ────────────────────────────────────────────────────────────
+async function loadPlayers() {
+  syncStatus('spin', 'Carregando jogadores…');
+  try {
+    const rows = await dbLoad();
+    players = rows.map(r => ({
+      id          : r.id,
+      nick        : r.nick,
+      tag         : r.tag,
+      currentTier : r.current_tier || 'Unranked',
+      rr          : r.rr || 0,
+      mmrChange   : r.mmr_change ?? null,
+      peakTier    : r.peak_tier || null,
+      loading     : false,
+      error       : null,
+    }));
+    render();
+    syncStatus('ok', `Banco conectado · ${players.length} jogador${players.length !== 1 ? 'es' : ''}`);
+  } catch(e) {
+    syncStatus('err', 'Erro ao conectar no banco: ' + e.message);
+    document.getElementById('rankList').innerHTML = '';
+  }
+}
+
+// ─── REFRESH PLAYER ──────────────────────────────────────────────────────────
+async function refreshPlayer(idx) {
+  const p = players[idx]; if (!p) return;
+  p.loading = true; p.error = null; render();
+  try {
+    const data = await fetchMMR(p.nick, p.tag);
+    Object.assign(p, data);
+    await dbUpdate(p.id, data);
+  } catch(e) {
+    p.error = e.message;
+  } finally {
+    p.loading = false;
+  }
+  render();
+}
+
+async function refreshAll() {
+  syncStatus('spin', 'Atualizando ranks…');
+  for (let i = 0; i < players.length; i++) await refreshPlayer(i);
+  syncStatus('ok', `Banco conectado · ${players.length} jogador${players.length !== 1 ? 'es' : ''}`);
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('iNick').focus();
+  document.getElementById('mErr').style.display = 'none';
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function savePlayer() {
+  if (!askPassword()) {
+    alert('Senha incorreta!');
+    return;
+  }
+
+  const nick  = document.getElementById('iNick').value.trim();
+  const tag   = document.getElementById('iTag').value.trim().replace('#', '');
+  const err   = document.getElementById('mErr');
+  const btn   = document.getElementById('btnSave');
+  err.style.display = 'none';
+
+  if (!nick || !tag) { err.textContent = 'Preenche nick e tag.'; err.style.display = 'block'; return; }
+
+  const dup = players.find(p => p.nick.toLowerCase() === nick.toLowerCase() && p.tag.toLowerCase() === tag.toLowerCase());
+  if (dup) { err.textContent = 'Jogador já está na lista!'; err.style.display = 'block'; return; }
+
+  btn.textContent = 'Buscando...'; btn.disabled = true;
+
+  try {
+    const mmrData = await fetchMMR(nick, tag);
+    const row = await dbInsert({ nick, tag, ...mmrData });
+    players.push({ id: row.id, nick, tag, loading: false, error: null, ...mmrData });
+    closeModal();
+    document.getElementById('iNick').value = '';
+    document.getElementById('iTag').value  = '';
+    render();
+    syncStatus('ok', `Banco conectado · ${players.length} jogador${players.length !== 1 ? 'es' : ''}`);
+  } catch(e) {
+    err.textContent = 'Erro: ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.textContent = 'Buscar e salvar'; btn.disabled = false;
+  }
+}
+
+// ─── REMOVE ──────────────────────────────────────────────────────────────────
+async function removePlayer(idx) {
+  const p = players[idx];
+  if (!p || !confirm(`Remover ${p.nick} #${p.tag} do ranking?`)) return;
+  try {
+    await dbDelete(p.id);
+    players.splice(idx, 1);
+    render();
+    syncStatus('ok', `Banco conectado · ${players.length} jogador${players.length !== 1 ? 'es' : ''}`);
+  } catch(e) {
+    alert('Erro ao remover: ' + e.message);
+  }
+}
+
+// ─── SETTINGS ────────────────────────────────────────────────────────────────
+function changeRegion(v)   { region = v;   localStorage.setItem('vr_region', v);   }
+function changePlatform(v) { platform = v; localStorage.setItem('vr_platform', v); }
+
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) savePlayer();
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+loadPlayers();
+</script>
+</body>
+</html>
